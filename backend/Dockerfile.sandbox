@@ -1,0 +1,23 @@
+# Base image with GCC compiler
+FROM gcc:latest
+
+# Install timeout utility (for execution time limits)
+RUN apt-get update && \
+    apt-get install -y coreutils && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+# Create a non-root user for execution
+RUN useradd -m -u 1000 coder && \
+    mkdir -p /workspace && \
+    chown -R coder:coder /workspace
+
+# Set working directory
+WORKDIR /workspace
+
+# Switch to non-root user
+USER coder
+
+# Default command (can be overridden)
+CMD ["/bin/bash"]
+
