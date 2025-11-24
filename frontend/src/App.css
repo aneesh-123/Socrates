@@ -169,13 +169,16 @@ body {
   flex-direction: column;
   background-color: #1e1e1e;
   min-width: 0;
+  overflow: hidden;
 }
 
 .output-panel {
   display: flex;
   flex-direction: column;
-  height: 100%;
+  flex: 1;
+  min-height: 0;
   overflow: hidden;
+  border-bottom: 1px solid #3e3e42;
 }
 
 .output-header {
