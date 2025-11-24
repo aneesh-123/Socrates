@@ -18,6 +18,7 @@ export interface ExecutionResult {
   parsedErrors?: ParsedError[];
   exitCode: number;
   executionTime: number;
+  usedHarness?: boolean;
 }
 
 export interface ExecuteResponse {

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { ExecutionResult, explainError, ErrorExplanation as ErrorExplanationType } from '../../services/api';
 import { ErrorExplanation } from '../ErrorExplanation/ErrorExplanation';
 
@@ -13,6 +13,22 @@ export function OutputPanel({ result, error, isExecuting, code }: OutputPanelPro
   const [explanation, setExplanation] = useState<ErrorExplanationType | null>(null);
   const [isLoadingExplanation, setIsLoadingExplanation] = useState(false);
   const [explanationError, setExplanationError] = useState<string | null>(null);
+
+  const hasCompilerErrors = useMemo(() => {
+    if (error) {
+      return true;
+    }
+    if (result?.errors) {
+      const normalized = result.errors.toLowerCase();
+      return (
+        normalized.includes('error:') ||
+        normalized.includes('undefined reference') ||
+        normalized.includes('collect2:') ||
+        normalized.includes('ld returned')
+      );
+    }
+    return false;
+  }, [error, result]);
 
   const handleExplainError = async (errorText: string) => {
     setIsLoadingExplanation(true);
@@ -70,8 +86,11 @@ export function OutputPanel({ result, error, isExecuting, code }: OutputPanelPro
     );
   }
 
-  const hasErrors = result.errors && result.errors.trim().length > 0;
-  const hasOutput = result.output && result.output.trim().length > 0;
+  const displayErrors = hasCompilerErrors ? result.errors : '';
+  const hasErrors = displayErrors && displayErrors.trim().length > 0;
+  const shouldHideHarnessOutput = result.usedHarness && !hasCompilerErrors;
+  const hasOutput =
+    !shouldHideHarnessOutput && result.output && result.output.trim().length > 0;
 
   return (
     <div className="output-panel">
@@ -91,8 +110,8 @@ export function OutputPanel({ result, error, isExecuting, code }: OutputPanelPro
               <button
                 className="explain-button"
                 onClick={() => {
-                  if (result?.errors) {
-                    handleExplainError(result.errors);
+                  if (displayErrors) {
+                    handleExplainError(displayErrors);
                   }
                 }}
                 disabled={isLoadingExplanation}
@@ -100,7 +119,7 @@ export function OutputPanel({ result, error, isExecuting, code }: OutputPanelPro
                 {isLoadingExplanation ? '🤔 Analyzing...' : '💡 Explain Error'}
               </button>
             </div>
-            <pre className="error-text">{result.errors}</pre>
+            <pre className="error-text">{displayErrors}</pre>
             
             {/* Add ErrorExplanation component */}
             <ErrorExplanation

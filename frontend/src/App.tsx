@@ -6,37 +6,19 @@ import { RunButton } from './components/RunButton/RunButton';
 import { useCodeExecution } from './hooks/useCodeExecution';
 import './App.css';
 
-const DEFAULT_CODE = `#include <iostream>
-#include <vector>
-using namespace std;
-
-vector<int> twoSum(vector<int>& nums, int target) {
-    // Your code here
-    
-    return {};
-}
-
-int main() {
-    vector<int> nums = {2, 7, 11, 15};
-    int target = 9;
-    
-    vector<int> result = twoSum(nums, target);
-    
-    cout << "[" << result[0] << "," << result[1] << "]" << endl;
-    
-    return 0;
-}`;
+const DEFAULT_CODE = `class Solution {
+public:
+    vector<int> twoSum(vector<int>& nums, int target) {
+        return {};
+    }
+};`;
 
 const DEFAULT_SIDEBAR_WIDTH = 350;
 const MIN_SIDEBAR_WIDTH = 250;
 const MAX_SIDEBAR_WIDTH = 800;
 
 function App() {
-  const [code, setCode] = useState(() => {
-    // Load from localStorage or use default
-    const saved = localStorage.getItem('socrates-code');
-    return saved || DEFAULT_CODE;
-  });
+  const [code, setCode] = useState(DEFAULT_CODE);
 
   const [sidebarWidth, setSidebarWidth] = useState(() => {
     // Load from localStorage or use default
@@ -50,11 +32,6 @@ function App() {
   const resizeStartWidth = useRef<number>(0);
 
   const { result, isExecuting, error, execute } = useCodeExecution();
-
-  // Save code to localStorage whenever it changes
-  useEffect(() => {
-    localStorage.setItem('socrates-code', code);
-  }, [code]);
 
   // Save sidebar width to localStorage whenever it changes
   useEffect(() => {

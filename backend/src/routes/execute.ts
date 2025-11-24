@@ -1,9 +1,10 @@
 import { Router, Request, Response } from 'express';
 import { z } from 'zod';
-import { createTempDir, writeCodeToFile, cleanupTempDir, validateCodeSize } from '../services/fileService';
+import { createTempDir, cleanupTempDir, validateCodeSize } from '../services/fileService';
 import { executeCode } from '../services/dockerService';
 import { DOCKER_CONFIG } from '../config/docker';
 import { formatErrorGCCStyle } from '../services/errorParser';
+import { prepareCodeForExecution } from '../services/codeWrapper';
 
 const router = Router();
 
@@ -45,8 +46,8 @@ router.post('/execute', async (req: Request, res: Response) => {
     // Create temporary directory
     tempDir = await createTempDir();
 
-    // Write code to file
-    await writeCodeToFile(tempDir, code);
+    // Prepare code files (wrap with harness if needed)
+    const preparedCode = await prepareCodeForExecution(tempDir, code);
 
     // Execute code in Docker
     const result = await executeCode(tempDir);
@@ -54,7 +55,7 @@ router.post('/execute', async (req: Request, res: Response) => {
     // Format errors in GCC style if there are errors
     let formattedErrors = result.errors;
     if (result.errors && result.errors.trim().length > 0) {
-      formattedErrors = formatErrorGCCStyle(result.errors, code);
+      formattedErrors = formatErrorGCCStyle(result.errors, preparedCode.filesForErrors);
     }
 
     // Return result
@@ -66,6 +67,7 @@ router.post('/execute', async (req: Request, res: Response) => {
         parsedErrors: result.parsedErrors,
         exitCode: result.exitCode,
         executionTime: result.executionTime,
+        usedHarness: preparedCode.usedHarness,
       },
     });
   } catch (error) {

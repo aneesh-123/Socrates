@@ -33,7 +33,9 @@ export function parseCompilerError(errorText: string): ParsedError[] {
     // Match: main.cpp:5:10: error: message
     // Also handles: 3main.cpp:5:10: error: message (with number prefix from Docker logs)
     // Also handles: main.cpp:5:10: error: message (with or without column)
-    const errorMatch = line.match(/^(\d+)?(\w+\.cpp):(\d+)(?::(\d+))?:\s*(error|warning):\s*(.+)$/);
+    const errorMatch = line.match(
+      /^(\d+)?([\w/\\.-]+\.(?:cpp|cc|cxx|hpp|hh|h)):(\d+)(?::(\d+))?:\s*(error|warning):\s*(.+)$/
+    );
     
     if (errorMatch) {
       const [, prefix, file, lineNum, col, errorType, message] = errorMatch;
@@ -166,7 +168,9 @@ export function getCodeContext(code: string, lineNumber: number, contextLines = 
  * @param userCode Full user code for context
  * @returns Formatted error string in GCC style
  */
-export function formatErrorGCCStyle(errorText: string, userCode: string): string {
+type CodeSource = string | Record<string, string>;
+
+export function formatErrorGCCStyle(errorText: string, source: CodeSource): string {
   if (!errorText || errorText.trim().length === 0) {
     return '';
   }
@@ -181,7 +185,8 @@ export function formatErrorGCCStyle(errorText: string, userCode: string): string
   }
 
   const lines = errorText.split('\n');
-  const codeLines = userCode.split('\n');
+  const codeMap: Record<string, string> =
+    typeof source === 'string' ? { 'main.cpp': source } : source;
   const formattedErrors: string[] = [];
   
   let i = 0;
@@ -195,7 +200,9 @@ export function formatErrorGCCStyle(errorText: string, userCode: string): string
 
     // Match: main.cpp:5:10: error: message
     // Also handles: 3main.cpp:5:10: error: message (with number prefix from Docker logs)
-    const errorMatch = trimmedLine.match(/^(\d+)?(\w+\.cpp):(\d+)(?::(\d+))?:\s*(error|warning):\s*(.+)$/);
+    const errorMatch = trimmedLine.match(
+      /^(\d+)?([\w/\\.-]+\.(?:cpp|cc|cxx|hpp|hh|h)):(\d+)(?::(\d+))?:\s*(error|warning):\s*(.+)$/
+    );
     
     if (errorMatch) {
       const [, prefix, file, lineNumStr, colStr, errorType, message] = errorMatch;
@@ -212,9 +219,11 @@ export function formatErrorGCCStyle(errorText: string, userCode: string): string
       }
       
       // Get the actual code line (1-indexed to 0-indexed conversion)
-      const codeLine = lineNum > 0 && lineNum <= codeLines.length 
-        ? codeLines[lineNum - 1] 
-        : '';
+      const sourceKey = Object.keys(codeMap).find((key) => trimmedLine.includes(key)) ?? 'main.cpp';
+      const codeSource = codeMap[sourceKey] ?? '';
+      const codeLines = codeSource.split('\n');
+      const codeLine =
+        lineNum > 0 && lineNum <= codeLines.length ? codeLines[lineNum - 1] : '';
       
       // Build formatted error
       let formatted = functionContext;

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { OutputPanel } from '../OutputPanel/OutputPanel';
 import { TestCases } from '../TestCases/TestCases';
 import { ExecutionResult } from '../../services/api';
@@ -19,37 +19,45 @@ export function RightPanel({ result, error, isExecuting, code }: RightPanelProps
   const lastResultRef = useRef<ExecutionResult | null>(null);
   const wasExecutingRef = useRef<boolean>(false);
 
-  // Auto-switch to output tab when there are errors
-  useEffect(() => {
-    const hasErrors = error || (result && result.errors && result.errors.trim().length > 0);
-    
-    // Track when execution transitions from executing to not executing
-    const executionJustCompleted = wasExecutingRef.current && !isExecuting;
-    
-    if (hasErrors) {
-      // If there are errors, show output tab
-      setActiveTab('output');
-    } else if (result && !isExecuting && executionJustCompleted) {
-      // Only proceed if execution just completed (transitioned from executing to done)
-      // and there are no errors
-      const resultChanged = result !== lastResultRef.current;
-      
-      if (resultChanged && result.exitCode === 0 && !result.errors) {
-        // Switch to test cases when there are no errors
-        setActiveTab('testcases');
-        
-        // Only auto-run if execution just completed and there are no errors
-        if (!error && (!result.errors || result.errors.trim().length === 0)) {
-          setAutoRunTrigger(prev => prev + 1);
-        }
+  const hasCompilerErrors = useMemo(() => {
+    if (error) {
+      return true;
+    }
+    if (result && result.errors) {
+      const normalized = result.errors.toLowerCase();
+      if (
+        normalized.includes('error:') ||
+        normalized.includes('undefined reference') ||
+        normalized.includes('collect2:') ||
+        normalized.includes('ld returned')
+      ) {
+        return true;
       }
     }
-    
+    return false;
+  }, [error, result]);
+
+  // Auto-switch to output tab when there are errors
+  useEffect(() => {
+    // Track when execution transitions from executing to not executing
+    const executionJustCompleted = wasExecutingRef.current && !isExecuting;
+
+    if (hasCompilerErrors) {
+      // If there are compiler errors, show output tab
+      setActiveTab('output');
+    } else if (result && !isExecuting && executionJustCompleted) {
+      const resultChanged = result !== lastResultRef.current;
+
+      if (resultChanged) {
+        // Switch to test cases whenever compilation succeeded
+        setActiveTab('testcases');
+        setAutoRunTrigger(prev => prev + 1);
+      }
+    }
+
     lastResultRef.current = result;
     wasExecutingRef.current = isExecuting;
-  }, [error, result, isExecuting]);
-
-  const hasErrors = error || (result && result.errors && result.errors.trim().length > 0);
+  }, [hasCompilerErrors, result, isExecuting]);
 
   return (
     <div className="right-panel">
@@ -59,7 +67,7 @@ export function RightPanel({ result, error, isExecuting, code }: RightPanelProps
           onClick={() => setActiveTab('output')}
         >
           Output
-          {hasErrors && <span className="error-indicator">!</span>}
+          {hasCompilerErrors && <span className="error-indicator">!</span>}
         </button>
         <button
           className={`tab-button ${activeTab === 'testcases' ? 'active' : ''}`}

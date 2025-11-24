@@ -1,7 +1,7 @@
 import Docker from 'dockerode';
 import docker, { DOCKER_CONFIG } from '../config/docker';
 import * as path from 'path';
-import { parseCompilerError, ParsedError, formatErrorGCCStyle } from './errorParser';
+import { parseCompilerError, ParsedError } from './errorParser';
 
 export interface ExecutionResult {
   output: string;
