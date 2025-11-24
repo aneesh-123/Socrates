@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { createTempDir, writeCodeToFile, cleanupTempDir, validateCodeSize } from '../services/fileService';
 import { executeCode } from '../services/dockerService';
 import { DOCKER_CONFIG } from '../config/docker';
+import { formatErrorGCCStyle } from '../services/errorParser';
 
 const router = Router();
 
@@ -50,12 +51,18 @@ router.post('/execute', async (req: Request, res: Response) => {
     // Execute code in Docker
     const result = await executeCode(tempDir);
 
+    // Format errors in GCC style if there are errors
+    let formattedErrors = result.errors;
+    if (result.errors && result.errors.trim().length > 0) {
+      formattedErrors = formatErrorGCCStyle(result.errors, code);
+    }
+
     // Return result
     res.json({
       success: true,
       result: {
         output: result.output,
-        errors: result.errors,
+        errors: formattedErrors,
         parsedErrors: result.parsedErrors,
         exitCode: result.exitCode,
         executionTime: result.executionTime,

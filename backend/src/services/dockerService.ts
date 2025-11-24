@@ -1,7 +1,7 @@
 import Docker from 'dockerode';
 import docker, { DOCKER_CONFIG } from '../config/docker';
 import * as path from 'path';
-import { parseCompilerError, ParsedError } from './errorParser';
+import { parseCompilerError, ParsedError, formatErrorGCCStyle } from './errorParser';
 
 export interface ExecutionResult {
   output: string;
@@ -141,6 +141,10 @@ export async function executeCode(hostDir: string): Promise<ExecutionResult> {
     
     // Also clean up any remaining weird characters
     logOutput = logOutput.replace(/[^\x20-\x7E\n\r\t]/g, ''); // Keep only printable ASCII + newlines/tabs
+    
+    // Clean up numeric prefixes before filenames (e.g., "3main.cpp" -> "main.cpp")
+    // This can happen due to Docker log formatting
+    logOutput = logOutput.replace(/^(\d+)(\w+\.cpp)/gm, '$2');
 
     // Parse exit code from logs (if present) or use container exit code
     let exitCode = 0;
@@ -192,12 +196,17 @@ export async function executeCode(hostDir: string): Promise<ExecutionResult> {
       }
     }
 
-    // Parse errors into structured format
-    const errorText = errorLines.length > 0 
+    // Get raw error text
+    const rawErrorText = errorLines.length > 0 
       ? errorLines.join('\n') 
       : (exitCode !== 0 ? cleanOutput || 'Compilation or execution failed with no error message' : '');
     
-    const parsedErrors = errorText ? parseCompilerError(errorText) : [];
+    // Parse errors into structured format
+    const parsedErrors = rawErrorText ? parseCompilerError(rawErrorText) : [];
+    
+    // Format errors in GCC style (we'll need the user code for this, but for now use raw)
+    // Note: We'll format this in the route handler where we have access to user code
+    const errorText = rawErrorText;
 
     // If compilation failed (non-zero exit code), show all output as errors if no clear errors found
     if (exitCode !== 0) {

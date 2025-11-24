@@ -31,11 +31,12 @@ export function parseCompilerError(errorText: string): ParsedError[] {
     if (line.length === 0) continue;
     
     // Match: main.cpp:5:10: error: message
+    // Also handles: 3main.cpp:5:10: error: message (with number prefix from Docker logs)
     // Also handles: main.cpp:5:10: error: message (with or without column)
-    const errorMatch = line.match(/^(\w+\.cpp):(\d+)(?::(\d+))?:\s*(error|warning):\s*(.+)$/);
+    const errorMatch = line.match(/^(\d+)?(\w+\.cpp):(\d+)(?::(\d+))?:\s*(error|warning):\s*(.+)$/);
     
     if (errorMatch) {
-      const [, file, lineNum, col, errorType, message] = errorMatch;
+      const [, prefix, file, lineNum, col, errorType, message] = errorMatch;
       
       // Get code snippet from following lines if available
       let codeSnippet: string | undefined;
@@ -157,5 +158,139 @@ export function getCodeContext(code: string, lineNumber: number, contextLines = 
       return `${marker} ${actualLineNum}: ${line}`;
     })
     .join('\n');
+}
+
+/**
+ * Formats compiler errors in GCC-style format
+ * @param errorText Raw error output from compiler
+ * @param userCode Full user code for context
+ * @returns Formatted error string in GCC style
+ */
+export function formatErrorGCCStyle(errorText: string, userCode: string): string {
+  if (!errorText || errorText.trim().length === 0) {
+    return '';
+  }
+
+  // Check if error is already in GCC format (has code snippets with |)
+  // If so, just clean it up and return
+  if (errorText.includes(' | ') && errorText.includes('^')) {
+    // Already formatted, just clean up any Docker log artifacts
+    return errorText
+      .replace(/^(\d+)(\w+\.cpp)/gm, '$2') // Remove numeric prefixes
+      .trim();
+  }
+
+  const lines = errorText.split('\n');
+  const codeLines = userCode.split('\n');
+  const formattedErrors: string[] = [];
+  
+  let i = 0;
+  while (i < lines.length) {
+    const line = lines[i];
+    const trimmedLine = line.trim();
+    if (trimmedLine.length === 0) {
+      i++;
+      continue;
+    }
+
+    // Match: main.cpp:5:10: error: message
+    // Also handles: 3main.cpp:5:10: error: message (with number prefix from Docker logs)
+    const errorMatch = trimmedLine.match(/^(\d+)?(\w+\.cpp):(\d+)(?::(\d+))?:\s*(error|warning):\s*(.+)$/);
+    
+    if (errorMatch) {
+      const [, prefix, file, lineNumStr, colStr, errorType, message] = errorMatch;
+      const lineNum = parseInt(lineNumStr, 10);
+      const column = colStr ? parseInt(colStr, 10) : undefined;
+      
+      // Get function context if available (look for "In function" line before error)
+      let functionContext = '';
+      if (i > 0) {
+        const prevLine = lines[i - 1].trim();
+        if (prevLine.includes('In function')) {
+          functionContext = prevLine + '\n\n';
+        }
+      }
+      
+      // Get the actual code line (1-indexed to 0-indexed conversion)
+      const codeLine = lineNum > 0 && lineNum <= codeLines.length 
+        ? codeLines[lineNum - 1] 
+        : '';
+      
+      // Build formatted error
+      let formatted = functionContext;
+      formatted += `${file}:${lineNum}${column ? `:${column}` : ''}: ${errorType}: ${message}\n\n`;
+      
+      if (codeLine) {
+        // Format: "    8 |   cout << "Hello World""
+        const lineNumStrFormatted = lineNum.toString();
+        const linePrefix = `    ${lineNumStrFormatted} | `;
+        formatted += `${linePrefix}${codeLine}\n`;
+        
+        // Add caret pointing to error location
+        if (column !== undefined && column > 0) {
+          // Calculate spacing for caret
+          // Need to account for tabs in the code line
+          let caretColumn = column - 1; // Convert to 0-indexed
+          let visualColumn = 0;
+          
+          // Count visual columns (tabs = 4 spaces typically)
+          for (let j = 0; j < Math.min(caretColumn, codeLine.length); j++) {
+            if (codeLine[j] === '\t') {
+              visualColumn += 4 - (visualColumn % 4); // Tab to next multiple of 4
+            } else {
+              visualColumn++;
+            }
+          }
+          
+          const spacesBeforeCaret = linePrefix.length + visualColumn;
+          formatted += ' ' + ' '.repeat(spacesBeforeCaret) + '^\n';
+          
+          // Add suggested fix if it's a missing semicolon
+          if (message.includes("expected ';'")) {
+            formatted += ' ' + ' '.repeat(spacesBeforeCaret) + ';\n';
+          }
+        } else {
+          // If no column, just point to end of line
+          const spacesBeforeCaret = linePrefix.length + codeLine.length;
+          formatted += ' ' + ' '.repeat(spacesBeforeCaret) + '^\n';
+        }
+        
+        // Add next line context if available
+        if (lineNum < codeLines.length) {
+          const nextLine = codeLines[lineNum];
+          const nextLineNumStr = (lineNum + 1).toString();
+          const nextLinePrefix = `    ${nextLineNumStr} | `;
+          formatted += `${nextLinePrefix}${nextLine}\n`;
+          // Add continuation marker
+          formatted += ' ' + ' '.repeat(nextLinePrefix.length) + '~~~~~~\n';
+        }
+      }
+      
+      formattedErrors.push(formatted);
+    } else {
+      // Check for "In function" context lines - preserve them
+      if (trimmedLine.includes('In function')) {
+        formattedErrors.push(trimmedLine);
+        i++;
+        continue;
+      }
+      
+      // For non-standard errors, try to preserve original format
+      if (trimmedLine.includes('undefined reference') || 
+          trimmedLine.includes('collect2:') || 
+          trimmedLine.includes('ld returned')) {
+        formattedErrors.push(trimmedLine);
+      }
+    }
+    
+    i++;
+  }
+  
+  // If we didn't format anything, return original (might already be formatted)
+  if (formattedErrors.length === 0) {
+    return errorText;
+  }
+  
+  return formattedErrors.join('\n');
 }
 

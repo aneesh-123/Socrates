@@ -1,7 +1,8 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Editor } from './components/Editor/Editor';
 import { OutputPanel } from './components/OutputPanel/OutputPanel';
 import { RunButton } from './components/RunButton/RunButton';
+import { ProblemDescription } from './components/ProblemDescription/ProblemDescription';
 import { useCodeExecution } from './hooks/useCodeExecution';
 import './App.css';
 
@@ -13,6 +14,10 @@ int main() {
     return 0;
 }`;
 
+const DEFAULT_SIDEBAR_WIDTH = 350;
+const MIN_SIDEBAR_WIDTH = 250;
+const MAX_SIDEBAR_WIDTH = 800;
+
 function App() {
   const [code, setCode] = useState(() => {
     // Load from localStorage or use default
@@ -20,12 +25,62 @@ function App() {
     return saved || DEFAULT_CODE;
   });
 
+  const [sidebarWidth, setSidebarWidth] = useState(() => {
+    // Load from localStorage or use default
+    const saved = localStorage.getItem('socrates-sidebar-width');
+    return saved ? parseInt(saved, 10) : DEFAULT_SIDEBAR_WIDTH;
+  });
+
+  const [isResizing, setIsResizing] = useState(false);
+  const sidebarRef = useRef<HTMLDivElement>(null);
+  const resizeStartX = useRef<number>(0);
+  const resizeStartWidth = useRef<number>(0);
+
   const { result, isExecuting, error, execute, clear } = useCodeExecution();
 
   // Save code to localStorage whenever it changes
   useEffect(() => {
     localStorage.setItem('socrates-code', code);
   }, [code]);
+
+  // Save sidebar width to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem('socrates-sidebar-width', sidebarWidth.toString());
+  }, [sidebarWidth]);
+
+  // Handle resize start
+  const handleResizeStart = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsResizing(true);
+    resizeStartX.current = e.clientX;
+    resizeStartWidth.current = sidebarWidth;
+  }, [sidebarWidth]);
+
+  // Handle resize
+  useEffect(() => {
+    if (!isResizing) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const diff = e.clientX - resizeStartX.current;
+      const newWidth = Math.max(
+        MIN_SIDEBAR_WIDTH,
+        Math.min(MAX_SIDEBAR_WIDTH, resizeStartWidth.current + diff)
+      );
+      setSidebarWidth(newWidth);
+    };
+
+    const handleMouseUp = () => {
+      setIsResizing(false);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isResizing]);
 
   const handleRun = useCallback(() => {
     if (code.trim().length === 0) {
@@ -55,6 +110,19 @@ function App() {
       </header>
       
       <div className="main-container">
+        <div 
+          ref={sidebarRef}
+          className="problem-section"
+          style={{ width: `${sidebarWidth}px` }}
+        >
+          <ProblemDescription />
+        </div>
+
+        <div 
+          className={`resize-handle ${isResizing ? 'resizing' : ''}`}
+          onMouseDown={handleResizeStart}
+        />
+
         <div className="editor-section">
           <div className="editor-header">
             <span>main.cpp</span>
