@@ -1,14 +1,29 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Editor } from './components/Editor/Editor';
 import { ProblemDescription } from './components/ProblemDescription/ProblemDescription';
-import { TestCases } from './components/TestCases/TestCases';
+import { RightPanel } from './components/RightPanel/RightPanel';
+import { RunButton } from './components/RunButton/RunButton';
+import { useCodeExecution } from './hooks/useCodeExecution';
 import './App.css';
 
 const DEFAULT_CODE = `#include <iostream>
+#include <vector>
 using namespace std;
 
+vector<int> twoSum(vector<int>& nums, int target) {
+    // Your code here
+    
+    return {};
+}
+
 int main() {
-    cout << "Hello, World!" << endl;
+    vector<int> nums = {2, 7, 11, 15};
+    int target = 9;
+    
+    vector<int> result = twoSum(nums, target);
+    
+    cout << "[" << result[0] << "," << result[1] << "]" << endl;
+    
     return 0;
 }`;
 
@@ -33,6 +48,8 @@ function App() {
   const sidebarRef = useRef<HTMLDivElement>(null);
   const resizeStartX = useRef<number>(0);
   const resizeStartWidth = useRef<number>(0);
+
+  const { result, isExecuting, error, execute } = useCodeExecution();
 
   // Save code to localStorage whenever it changes
   useEffect(() => {
@@ -78,6 +95,25 @@ function App() {
     };
   }, [isResizing]);
 
+  const handleRun = useCallback(() => {
+    if (code.trim().length === 0) {
+      return;
+    }
+    execute(code);
+  }, [code, execute]);
+
+  // Keyboard shortcut: Ctrl+Enter to run
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        e.preventDefault();
+        handleRun();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleRun]);
 
   return (
     <div className="app">
@@ -103,6 +139,11 @@ function App() {
         <div className="editor-section">
           <div className="editor-header">
             <span>main.cpp</span>
+            <RunButton
+              onClick={handleRun}
+              disabled={code.trim().length === 0}
+              isExecuting={isExecuting}
+            />
           </div>
           <div className="editor-container">
             <Editor
@@ -113,7 +154,12 @@ function App() {
         </div>
 
         <div className="output-section">
-          <TestCases code={code} />
+          <RightPanel
+            result={result}
+            error={error}
+            isExecuting={isExecuting}
+            code={code}
+          />
         </div>
       </div>
     </div>

@@ -1,0 +1,66 @@
+.right-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background-color: #1e1e1e;
+  overflow: hidden;
+}
+
+.right-panel-tabs {
+  display: flex;
+  background-color: #252526;
+  border-bottom: 1px solid #3e3e42;
+  flex-shrink: 0;
+}
+
+.tab-button {
+  flex: 1;
+  background: none;
+  border: none;
+  color: #858585;
+  padding: 0.75rem 1rem;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: all 0.2s;
+  border-bottom: 2px solid transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  position: relative;
+}
+
+.tab-button:hover {
+  background-color: #2a2d2e;
+  color: #d4d4d4;
+}
+
+.tab-button.active {
+  color: #ffffff;
+  border-bottom-color: #0e639c;
+  background-color: #1e1e1e;
+}
+
+.error-indicator {
+  background-color: #f48771;
+  color: #ffffff;
+  border-radius: 50%;
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: bold;
+  line-height: 1;
+}
+
+.right-panel-content {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+

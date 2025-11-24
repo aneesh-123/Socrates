@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { executeCode } from '../../services/api';
 import './TestCases.css';
 
@@ -14,6 +14,7 @@ interface TestCasesProps {
   testCases?: TestCase[];
   code?: string;
   onTestRun?: (testIndex: number, passed: boolean) => void;
+  autoRunTrigger?: number; // Increment this to trigger auto-run
 }
 
 // Default test cases for Two Sum problem
@@ -56,10 +57,38 @@ export function TestCases({
   testCases = DEFAULT_TWO_SUM_TEST_CASES,
   code = '',
   onTestRun,
+  autoRunTrigger,
 }: TestCasesProps) {
   const [testResults, setTestResults] = useState<Map<number, TestResult>>(new Map());
   const [isRunning, setIsRunning] = useState(false);
   const [runningTestIndex, setRunningTestIndex] = useState<number | null>(null);
+  // Initialize to current autoRunTrigger value to prevent running on mount/tab switch
+  // This ensures the ref is set before any effects run
+  const lastAutoRunTrigger = useRef<number>(autoRunTrigger ?? 0);
+  const isFirstRender = useRef<boolean>(true);
+
+  // Auto-run tests when trigger changes (code executed successfully)
+  // Only run if trigger is provided and has increased (not just on mount or tab switch)
+  useEffect(() => {
+    // On first render, just sync the ref and skip running
+    if (isFirstRender.current) {
+      lastAutoRunTrigger.current = autoRunTrigger ?? 0;
+      isFirstRender.current = false;
+      return;
+    }
+
+    // Only trigger if autoRunTrigger is defined, greater than 0, and has increased
+    if (autoRunTrigger !== undefined && autoRunTrigger > 0 && autoRunTrigger > lastAutoRunTrigger.current) {
+      lastAutoRunTrigger.current = autoRunTrigger;
+      // Only run if we have code and we're not already running
+      if (code && code.trim().length > 0 && !isRunning) {
+        runAllTests();
+      }
+    }
+    // Don't run on initial mount or when component becomes visible
+    // Only run when trigger actually increases
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoRunTrigger]);
 
   const formatInput = (input: { [key: string]: any }): string => {
     // Format input for C++ code

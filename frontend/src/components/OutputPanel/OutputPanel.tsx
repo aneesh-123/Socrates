@@ -78,8 +78,9 @@ export function OutputPanel({ result, error, isExecuting, code }: OutputPanelPro
       <div className="output-header">
         <span>Output</span>
         <span className={`status ${result.exitCode === 0 ? 'status-success' : 'status-error'}`}>
-          {result.exitCode === 0 ? '✓ Success' : '✗ Failed'}
-          {result.executionTime > 0 && ` (${result.executionTime}ms)`}
+          {result.exitCode === 0 ? '✓' : '✗ Failed'}
+          {result.exitCode === 0 && result.executionTime > 0 && ` (${result.executionTime}ms)`}
+          {result.exitCode !== 0 && result.executionTime > 0 && ` (${result.executionTime}ms)`}
         </span>
       </div>
       <div className="output-content">

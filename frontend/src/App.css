@@ -175,10 +175,8 @@ body {
 .output-panel {
   display: flex;
   flex-direction: column;
-  flex: 1;
-  min-height: 0;
+  height: 100%;
   overflow: hidden;
-  border-bottom: 1px solid #3e3e42;
 }
 
 .output-header {
