@@ -119,11 +119,82 @@ export interface PreparedCodeResult {
 }
 
 /**
+ * Generates a harness that runs a single test case
+ */
+function generateSingleTestHarness(testIndex: number): string {
+  const testCases = [
+    { nums: [2, 7, 11, 15], target: 9, expected: [0, 1], label: "Example 1" },
+    { nums: [3, 2, 4], target: 6, expected: [1, 2], label: "Example 2" },
+    { nums: [3, 3], target: 6, expected: [0, 1], label: "Example 3" }
+  ];
+
+  const test = testIndex >= 0 && testIndex < testCases.length ? testCases[testIndex] : testCases[0];
+  const numsStr = `{${test.nums.join(', ')}}`;
+  const expectedStr = `{${test.expected.join(', ')}}`;
+
+  return `
+#include <iostream>
+#include <vector>
+#include <string>
+#include <algorithm>
+#include <sstream>
+
+using namespace std;
+
+#include "solution.hpp"
+
+string vectorToString(const vector<int>& values) {
+  if (values.empty()) {
+    return "[]";
+  }
+  ostringstream oss;
+  oss << "[";
+  for (size_t i = 0; i < values.size(); ++i) {
+    oss << values[i];
+    if (i + 1 < values.size()) {
+      oss << ", ";
+    }
+  }
+  oss << "]";
+  return oss.str();
+}
+
+int main() {
+  ios::sync_with_stdio(false);
+  cin.tie(nullptr);
+  
+  Solution solution;
+  vector<int> nums = ${numsStr};
+  int target = ${test.target};
+  
+  // Mark start of console output (before calling user's function)
+  cout << "CONSOLE_START\\n";
+  cout.flush();
+  
+  // Call user's function (this will capture all their cout statements)
+  vector<int> result = solution.twoSum(nums, target);
+  
+  // Mark end of console output and start of return value
+  cout << "CONSOLE_END\\n";
+  cout.flush();
+  cout << "RETURN_VALUE:" << vectorToString(result) << "\\n";
+  cout.flush();
+  
+  return 0;
+}
+`.trim();
+}
+
+/**
  * Prepares user code for execution. If the user provided their own main function,
  * we use the code as-is. Otherwise, we generate a harness that includes the user's
- * Solution implementation and runs predefined test cases.
+ * Solution implementation and runs a single test case.
  */
-export async function prepareCodeForExecution(dirPath: string, userCode: string): Promise<PreparedCodeResult> {
+export async function prepareCodeForExecution(
+  dirPath: string, 
+  userCode: string, 
+  testIndex?: number
+): Promise<PreparedCodeResult> {
   const hasUserMain = MAIN_DETECTION_REGEX.test(userCode);
 
   if (hasUserMain) {
@@ -140,14 +211,19 @@ export async function prepareCodeForExecution(dirPath: string, userCode: string)
   const solutionPath = path.join(dirPath, 'solution.hpp');
   await fs.writeFile(solutionPath, trimmedUserCode, 'utf-8');
 
+  // Generate harness for single test case if testIndex is provided
+  const harnessCode = testIndex !== undefined 
+    ? generateSingleTestHarness(testIndex)
+    : TEST_CASES_SNIPPET;
+
   const mainPath = path.join(dirPath, 'main.cpp');
-  await fs.writeFile(mainPath, TEST_CASES_SNIPPET + '\n', 'utf-8');
+  await fs.writeFile(mainPath, harnessCode + '\n', 'utf-8');
 
   return {
     mainFilePath: mainPath,
     filesForErrors: {
       'solution.hpp': trimmedUserCode,
-      'main.cpp': TEST_CASES_SNIPPET,
+      'main.cpp': harnessCode,
     },
     usedHarness: true,
   };

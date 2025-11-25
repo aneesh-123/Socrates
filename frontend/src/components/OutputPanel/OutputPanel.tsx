@@ -20,11 +20,16 @@ export function OutputPanel({ result, error, isExecuting, code }: OutputPanelPro
     }
     if (result?.errors) {
       const normalized = result.errors.toLowerCase();
+      // Only treat real compilation/linker errors as errors
+      // Ignore warnings (unused parameters, etc.) and test failures
       return (
-        normalized.includes('error:') ||
+        (normalized.includes('error:') && !normalized.includes('warning')) ||
         normalized.includes('undefined reference') ||
         normalized.includes('collect2:') ||
-        normalized.includes('ld returned')
+        normalized.includes('ld returned') ||
+        normalized.includes('cannot find') ||
+        normalized.includes('no such file') ||
+        normalized.includes('multiple definition')
       );
     }
     return false;
@@ -86,20 +91,31 @@ export function OutputPanel({ result, error, isExecuting, code }: OutputPanelPro
     );
   }
 
-  const displayErrors = hasCompilerErrors ? result.errors : '';
+  const displayErrors = hasCompilerErrors && result.errors ? result.errors : '';
   const hasErrors = displayErrors && displayErrors.trim().length > 0;
-  const shouldHideHarnessOutput = result.usedHarness && !hasCompilerErrors;
-  const hasOutput =
-    !shouldHideHarnessOutput && result.output && result.output.trim().length > 0;
+  
+  // Show output if it exists (no more harness complexity)
+  const hasOutput = result.output && typeof result.output === 'string' && result.output.trim().length > 0;
+  
+  // Debug: Log to see what we're receiving
+  if (result) {
+    console.log('OutputPanel - Received result:', {
+      hasOutput,
+      outputLength: result.output?.length || 0,
+      outputPreview: result.output?.substring(0, 200) || '(empty)',
+      hasErrors,
+      exitCode: result.exitCode,
+    });
+  }
 
   return (
     <div className="output-panel">
       <div className="output-header">
         <span>Output</span>
-        <span className={`status ${result.exitCode === 0 ? 'status-success' : 'status-error'}`}>
-          {result.exitCode === 0 ? '✓' : '✗ Failed'}
-          {result.exitCode === 0 && result.executionTime > 0 && ` (${result.executionTime}ms)`}
-          {result.exitCode !== 0 && result.executionTime > 0 && ` (${result.executionTime}ms)`}
+        <span className={`status ${(result.exitCode ?? 1) === 0 ? 'status-success' : 'status-error'}`}>
+          {(result.exitCode ?? 1) === 0 ? '✓' : '✗ Failed'}
+          {(result.exitCode ?? 1) === 0 && result.executionTime && result.executionTime > 0 && ` (${result.executionTime}ms)`}
+          {(result.exitCode ?? 1) !== 0 && result.executionTime && result.executionTime > 0 && ` (${result.executionTime}ms)`}
         </span>
       </div>
       <div className="output-content">

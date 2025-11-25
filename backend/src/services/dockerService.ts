@@ -168,38 +168,85 @@ export async function executeCode(hostDir: string): Promise<ExecutionResult> {
     const outputLines: string[] = [];
     const errorLines: string[] = [];
 
-    // Better error detection - look for common compiler/linker error patterns
+    // Better error detection - only catch real compilation/linker errors, completely ignore warnings
     let inErrorSection = false;
+    let inWarningSection = false;
+    
     for (const line of lines) {
       const lowerLine = line.toLowerCase();
+      const trimmedLine = line.trim();
+      
+      // Check if this is a warning - completely skip warnings
+      if (lowerLine.includes('warning:') || lowerLine.includes('warning ') || lowerLine.includes('[-wunused')) {
+        inWarningSection = true;
+        // Skip this line and continue to next
+        continue;
+      }
+      
+      // Check for warning context lines (before the actual warning)
+      if (lowerLine.includes('in file included from') || 
+          lowerLine.includes('in member function') ||
+          trimmedLine.startsWith('#') ||
+          trimmedLine.startsWith('^')) {
+        // These are usually part of warning context, skip them
+        continue;
+      }
+      
+      // Check if we're in a warning section (lines after warning: like file paths, line numbers, etc.)
+      if (inWarningSection) {
+        // Check if this line is part of the warning (file path, line number, caret indicators, etc.)
+        if (line.match(/^\s*[|@=1-9K]/) || 
+            line.match(/^\s*\^/) || 
+            trimmedLine.startsWith('solution.hpp:') || 
+            trimmedLine.startsWith('main.cpp:') ||
+            line.match(/^\s+\d+\s*\|/)) {
+          // This is part of the warning, skip it
+          continue;
+        } else if (trimmedLine.length === 0) {
+          // Empty line might be end of warning, but continue skipping
+          continue;
+        } else {
+          // End of warning section - this looks like actual output
+          inWarningSection = false;
+        }
+      }
+      
+      // If still in warning section, skip
+      if (inWarningSection) {
+        continue;
+      }
+      
+      // Real errors: syntax errors, undefined variables, type errors, linker errors
       if (
         lowerLine.includes('error:') ||
-        lowerLine.includes('error ') ||
+        (lowerLine.includes('error ') && !lowerLine.includes('warning')) ||
         lowerLine.includes('undefined reference') ||
         lowerLine.includes('collect2:') ||
         lowerLine.includes('ld returned') ||
         lowerLine.includes('cannot find') ||
         lowerLine.includes('no such file') ||
         lowerLine.includes('multiple definition') ||
-        lowerLine.startsWith('main.cpp:')
+        (lowerLine.startsWith('main.cpp:') && lowerLine.includes('error'))
       ) {
         inErrorSection = true;
         errorLines.push(line);
       } else if (inErrorSection && (line.trim().length === 0 || line.match(/^\s+\^/))) {
         // Continue error section for empty lines or error indicators (^)
         errorLines.push(line);
-      } else if (inErrorSection && !line.includes('warning:')) {
+      } else if (inErrorSection && !lowerLine.includes('warning:')) {
         // Continue error section unless it's just a warning
         errorLines.push(line);
       } else {
+        // Everything else goes to output (program output only, no warnings)
         outputLines.push(line);
       }
     }
 
-    // Get raw error text
+    // Get raw error text - only treat compiler/linker errors as errors
+    // Non-zero exit codes from programs (like test failures) are not errors
     const rawErrorText = errorLines.length > 0 
       ? errorLines.join('\n') 
-      : (exitCode !== 0 ? cleanOutput || 'Compilation or execution failed with no error message' : '');
+      : '';
     
     // Parse errors into structured format
     const parsedErrors = rawErrorText ? parseCompilerError(rawErrorText) : [];
@@ -208,30 +255,32 @@ export async function executeCode(hostDir: string): Promise<ExecutionResult> {
     // Note: We'll format this in the route handler where we have access to user code
     const errorText = rawErrorText;
 
-    // If compilation failed (non-zero exit code), show all output as errors if no clear errors found
-    if (exitCode !== 0) {
-      if (errorLines.length > 0) {
-        return {
-          output: '',
-          errors: errorText,
-          parsedErrors,
-          exitCode,
-          executionTime,
-        };
-      } else {
-        // If no clear errors but exit code is non-zero, show full output as error
-        return {
-          output: '',
-          errors: errorText,
-          parsedErrors,
-          exitCode,
-          executionTime,
-        };
-      }
+    // Only hide output if there are actual compiler/linker errors
+    // If exit code is non-zero but no errors, it's likely a program failure (like test failures)
+    // In that case, we still want to show the output (which includes test results and user cout)
+    if (rawErrorText && rawErrorText.trim().length > 0) {
+      // There are actual compiler/linker errors - show them, hide output
+      return {
+        output: '',
+        errors: errorText,
+        parsedErrors,
+        exitCode,
+        executionTime,
+      };
     }
 
+    const finalOutput = outputLines.join('\n').trim();
+    
+    // Debug: Log output to see what we're capturing
+    console.log('DockerService - Final output:', {
+      outputLength: finalOutput.length,
+      outputPreview: finalOutput.substring(0, 200),
+      totalLines: outputLines.length,
+      rawLogLength: logOutput.length,
+    });
+    
     return {
-      output: outputLines.join('\n').trim(),
+      output: finalOutput,
       errors: errorText,
       parsedErrors: parsedErrors.length > 0 ? parsedErrors : undefined,
       exitCode,

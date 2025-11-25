@@ -11,6 +11,7 @@ const router = Router();
 // Request validation schema
 const executeRequestSchema = z.object({
   code: z.string().min(1, 'Code cannot be empty'),
+  testIndex: z.number().int().min(0).optional(),
 });
 
 /**
@@ -31,7 +32,7 @@ router.post('/execute', async (req: Request, res: Response) => {
       });
     }
 
-    const { code } = validationResult.data;
+    const { code, testIndex } = validationResult.data;
 
     // Validate code size
     try {
@@ -46,8 +47,8 @@ router.post('/execute', async (req: Request, res: Response) => {
     // Create temporary directory
     tempDir = await createTempDir();
 
-    // Prepare code files (wrap with harness if needed)
-    const preparedCode = await prepareCodeForExecution(tempDir, code);
+    // Prepare code: if no main(), automatically wrap with test harness (single test if testIndex provided)
+    const preparedCode = await prepareCodeForExecution(tempDir, code, testIndex);
 
     // Execute code in Docker
     const result = await executeCode(tempDir);
@@ -58,6 +59,14 @@ router.post('/execute', async (req: Request, res: Response) => {
       formattedErrors = formatErrorGCCStyle(result.errors, preparedCode.filesForErrors);
     }
 
+    // Debug: Log what we're sending back
+    console.log('Execute route - Sending result:', {
+      outputLength: result.output?.length || 0,
+      outputPreview: result.output?.substring(0, 200) || '(empty)',
+      hasErrors: !!formattedErrors,
+      exitCode: result.exitCode,
+    });
+
     // Return result
     res.json({
       success: true,
@@ -67,7 +76,6 @@ router.post('/execute', async (req: Request, res: Response) => {
         parsedErrors: result.parsedErrors,
         exitCode: result.exitCode,
         executionTime: result.executionTime,
-        usedHarness: preparedCode.usedHarness,
       },
     });
   } catch (error) {

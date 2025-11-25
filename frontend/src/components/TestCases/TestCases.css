@@ -227,3 +227,58 @@
   background: #4e4e4e;
 }
 
+.compilation-error-section {
+  background-color: #3a1f1f;
+  border: 1px solid #f48771;
+  border-radius: 6px;
+  padding: 1rem;
+  margin: 1rem;
+  margin-bottom: 0;
+}
+
+.compilation-error-header {
+  color: #f48771;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.compilation-error-text {
+  color: #f48771;
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+  font-size: 0.85rem;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.test-case-console {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  color: #d4d4d4;
+  margin-top: 0.5rem;
+}
+
+.test-case-console strong {
+  color: #858585;
+  font-size: 0.85rem;
+}
+
+.console-output {
+  background-color: #1e1e1e;
+  padding: 0.5rem;
+  border-radius: 3px;
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+  font-size: 0.85rem;
+  color: #d4d4d4;
+  border: 1px solid #3e3e42;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  margin: 0;
+  line-height: 1.4;
+  max-height: 200px;
+  overflow-y: auto;
+}
+

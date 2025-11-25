@@ -3,10 +3,13 @@ import { Editor } from './components/Editor/Editor';
 import { ProblemDescription } from './components/ProblemDescription/ProblemDescription';
 import { RightPanel } from './components/RightPanel/RightPanel';
 import { RunButton } from './components/RunButton/RunButton';
-import { useCodeExecution } from './hooks/useCodeExecution';
 import './App.css';
 
-const DEFAULT_CODE = `class Solution {
+const DEFAULT_CODE = `#include <vector>
+#include <iostream>
+using namespace std;
+
+class Solution {
 public:
     vector<int> twoSum(vector<int>& nums, int target) {
         return {};
@@ -19,6 +22,7 @@ const MAX_SIDEBAR_WIDTH = 800;
 
 function App() {
   const [code, setCode] = useState(DEFAULT_CODE);
+  const [testRunTrigger, setTestRunTrigger] = useState(0);
 
   const [sidebarWidth, setSidebarWidth] = useState(() => {
     // Load from localStorage or use default
@@ -30,8 +34,6 @@ function App() {
   const sidebarRef = useRef<HTMLDivElement>(null);
   const resizeStartX = useRef<number>(0);
   const resizeStartWidth = useRef<number>(0);
-
-  const { result, isExecuting, error, execute } = useCodeExecution();
 
   // Save sidebar width to localStorage whenever it changes
   useEffect(() => {
@@ -76,8 +78,10 @@ function App() {
     if (code.trim().length === 0) {
       return;
     }
-    execute(code);
-  }, [code, execute]);
+    
+    // Always trigger test cases when Run is clicked
+    setTestRunTrigger(prev => prev + 1);
+  }, [code]);
 
   // Keyboard shortcut: Ctrl+Enter to run
   useEffect(() => {
@@ -119,7 +123,7 @@ function App() {
             <RunButton
               onClick={handleRun}
               disabled={code.trim().length === 0}
-              isExecuting={isExecuting}
+              isExecuting={false}
             />
           </div>
           <div className="editor-container">
@@ -132,10 +136,8 @@ function App() {
 
         <div className="output-section">
           <RightPanel
-            result={result}
-            error={error}
-            isExecuting={isExecuting}
             code={code}
+            testRunTrigger={testRunTrigger}
           />
         </div>
       </div>

@@ -18,7 +18,6 @@ export interface ExecutionResult {
   parsedErrors?: ParsedError[];
   exitCode: number;
   executionTime: number;
-  usedHarness?: boolean;
 }
 
 export interface ExecuteResponse {
@@ -47,12 +46,14 @@ export interface ExplainErrorResponse {
 /**
  * Executes C++ code on the backend
  * @param code C++ code to execute
+ * @param testIndex Optional test case index to run a single test
  * @returns Execution result
  */
-export async function executeCode(code: string): Promise<ExecuteResponse> {
+export async function executeCode(code: string, testIndex?: number): Promise<ExecuteResponse> {
   try {
     const response = await axios.post<ExecuteResponse>(`${API_BASE_URL}/execute`, {
       code,
+      testIndex,
     });
     return response.data;
   } catch (error) {
