@@ -1,0 +1,35 @@
+.ask-socrates-button {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background: linear-gradient(135deg, #0e639c 0%, #1177bb 100%);
+  color: white;
+  border: none;
+  padding: 0.875rem 1.5rem;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(14, 99, 156, 0.3);
+  z-index: 10;
+}
+
+.ask-socrates-button:hover {
+  background: linear-gradient(135deg, #1177bb 0%, #1494d4 100%);
+  box-shadow: 0 6px 16px rgba(14, 99, 156, 0.4);
+  transform: translateY(-2px);
+}
+
+.ask-socrates-button:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 8px rgba(14, 99, 156, 0.3);
+}
+
+.ask-socrates-button .socrates-icon {
+  font-size: 1.25rem;
+}
+

@@ -118,6 +118,7 @@ body {
 .editor-container {
   flex: 1;
   overflow: hidden;
+  position: relative;
 }
 
 .run-button {

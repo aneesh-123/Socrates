@@ -3,6 +3,9 @@ import { Editor } from './components/Editor/Editor';
 import { ProblemDescription } from './components/ProblemDescription/ProblemDescription';
 import { RightPanel } from './components/RightPanel/RightPanel';
 import { RunButton } from './components/RunButton/RunButton';
+import { AskSocratesButton } from './components/AskSocratesButton/AskSocratesButton';
+import { SocratesChatPopup } from './components/SocratesChatPopup/SocratesChatPopup';
+import { chatWithSocrates } from './services/api';
 import './App.css';
 
 const DEFAULT_CODE = `#include <vector>
@@ -23,6 +26,12 @@ const MAX_SIDEBAR_WIDTH = 800;
 function App() {
   const [code, setCode] = useState(DEFAULT_CODE);
   const [testRunTrigger, setTestRunTrigger] = useState(0);
+  const [socratesResponse, setSocratesResponse] = useState<string | null>(null);
+  const [socratesLoading, setSocratesLoading] = useState(false);
+  const [socratesError, setSocratesError] = useState<string | null>(null);
+  const [socratesVisible, setSocratesVisible] = useState(false);
+  const [socratesCategory, setSocratesCategory] = useState<string | null>(null);
+  const [socratesTestResult, setSocratesTestResult] = useState<{ passed?: number; total?: number } | null>(null);
 
   const [sidebarWidth, setSidebarWidth] = useState(() => {
     // Load from localStorage or use default
@@ -83,6 +92,51 @@ function App() {
     setTestRunTrigger(prev => prev + 1);
   }, [code]);
 
+  const handleAskSocrates = useCallback(async () => {
+    if (!code || code.trim().length === 0) {
+      setSocratesError('Please write some code first');
+      setSocratesVisible(true);
+      return;
+    }
+
+    setSocratesLoading(true);
+    setSocratesError(null);
+    setSocratesResponse(null);
+    setSocratesCategory(null);
+    setSocratesTestResult(null);
+    setSocratesVisible(true);
+
+    try {
+      // Run tests, classify, and get AI response
+      const result = await chatWithSocrates(code);
+      
+      setSocratesResponse(result.response);
+      setSocratesCategory(result.category || null);
+      setSocratesTestResult(result.testResult || null);
+      console.log('Socrates API called successfully:', {
+        category: result.category,
+        testResult: result.testResult,
+      });
+    } catch (error) {
+      console.error('Failed to chat with Socrates:', error);
+      setSocratesError(error instanceof Error ? error.message : 'Unknown error occurred');
+    } finally {
+      setSocratesLoading(false);
+    }
+  }, [code]);
+
+  const handleCloseSocrates = useCallback(() => {
+    setSocratesVisible(false);
+    setSocratesResponse(null);
+    setSocratesError(null);
+    setSocratesCategory(null);
+    setSocratesTestResult(null);
+  }, []);
+
+  const handleToggleSocrates = useCallback(() => {
+    setSocratesVisible(prev => !prev);
+  }, []);
+
   // Keyboard shortcut: Ctrl+Enter to run
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -127,6 +181,7 @@ function App() {
             />
           </div>
           <div className="editor-container">
+            <AskSocratesButton onClick={handleAskSocrates} />
             <Editor
               value={code}
               onChange={(value) => setCode(value || '')}
@@ -141,6 +196,17 @@ function App() {
           />
         </div>
       </div>
+
+      <SocratesChatPopup
+        isVisible={socratesVisible}
+        response={socratesResponse}
+        isLoading={socratesLoading}
+        error={socratesError}
+        category={socratesCategory}
+        testResult={socratesTestResult}
+        onClose={handleCloseSocrates}
+        onToggle={handleToggleSocrates}
+      />
     </div>
   );
 }

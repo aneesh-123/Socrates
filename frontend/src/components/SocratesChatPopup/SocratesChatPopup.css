@@ -1,0 +1,212 @@
+.socrates-chat-popup {
+  position: fixed;
+  bottom: 2rem;
+  right: 2rem;
+  width: 400px;
+  max-width: calc(100vw - 4rem);
+  max-height: 500px;
+  background-color: #252526;
+  border: 1px solid #3e3e42;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  display: flex;
+  flex-direction: column;
+  z-index: 1000;
+  transition: transform 0.3s ease, opacity 0.3s ease;
+  overflow: hidden;
+}
+
+.socrates-chat-popup.visible {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+.socrates-chat-popup.hidden {
+  transform: translateY(calc(100% - 48px));
+  opacity: 0.9;
+}
+
+.socrates-chat-header {
+  background-color: #2d2d30;
+  border-bottom: 1px solid #3e3e42;
+  padding: 0.75rem 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.socrates-chat-header:hover {
+  background-color: #323233;
+}
+
+.socrates-chat-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #ffffff;
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.socrates-chat-title .socrates-icon {
+  font-size: 1.1rem;
+}
+
+.socrates-chat-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.socrates-chat-toggle,
+.socrates-chat-close {
+  background: transparent;
+  border: none;
+  color: #858585;
+  font-size: 1.25rem;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all 0.2s;
+  line-height: 1;
+  padding: 0;
+}
+
+.socrates-chat-toggle:hover,
+.socrates-chat-close:hover {
+  background-color: #3e3e42;
+  color: #ffffff;
+}
+
+.socrates-chat-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1rem;
+  color: #d4d4d4;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  min-height: 100px;
+  max-height: 400px;
+}
+
+.socrates-chat-loading {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: #4fc1ff;
+  padding: 1rem 0;
+}
+
+.socrates-chat-loading .spinner {
+  display: inline-block;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.socrates-chat-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  color: #f48771;
+  padding: 1rem 0;
+}
+
+.socrates-chat-error span:first-child {
+  font-size: 1.2rem;
+  flex-shrink: 0;
+}
+
+.socrates-chat-response {
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+.socrates-chat-response p {
+  margin: 0 0 0.75rem 0;
+}
+
+.socrates-chat-response p:last-child {
+  margin-bottom: 0;
+}
+
+/* Testing info display */
+.socrates-chat-testing-info {
+  background-color: #2d2d30;
+  border: 2px dashed #0e639c;
+  border-radius: 6px;
+  padding: 0.75rem;
+  margin-bottom: 1rem;
+  font-size: 0.85rem;
+}
+
+.socrates-chat-testing-info strong {
+  color: #4fc1ff;
+  display: block;
+  margin-bottom: 0.5rem;
+}
+
+.testing-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  color: #d4d4d4;
+}
+
+.testing-details div {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.category-badge {
+  background-color: #0e639c;
+  color: white;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-weight: 600;
+  font-size: 0.8rem;
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+/* Scrollbar styling */
+.socrates-chat-content::-webkit-scrollbar {
+  width: 8px;
+}
+
+.socrates-chat-content::-webkit-scrollbar-track {
+  background: #1e1e1e;
+}
+
+.socrates-chat-content::-webkit-scrollbar-thumb {
+  background: #424242;
+  border-radius: 4px;
+}
+
+.socrates-chat-content::-webkit-scrollbar-thumb:hover {
+  background: #4e4e4e;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .socrates-chat-popup {
+    width: calc(100vw - 2rem);
+    right: 1rem;
+    bottom: 1rem;
+    max-width: none;
+  }
+}
+

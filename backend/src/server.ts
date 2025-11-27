@@ -3,6 +3,7 @@ import express from 'express';
 import cors from 'cors';
 import executeRouter from './routes/execute';
 import errorsRouter from './routes/errors';
+import chatRouter from './routes/chat';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -17,6 +18,7 @@ app.use(express.json({ limit: '50kb' })); // Limit request size
 // Routes
 app.use('/api', executeRouter);
 app.use('/api/errors', errorsRouter);
+app.use('/api/chat', chatRouter);
 
 // Root endpoint
 app.get('/', (_req, res) => {

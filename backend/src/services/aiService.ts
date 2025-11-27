@@ -86,6 +86,114 @@ function getOpenAIClient(): OpenAI {
   return openai;
 }
 
+/**
+ * Chat with Socrates - general AI chat functionality
+ * @param message User's message
+ * @param userCode Optional user code context
+ * @returns AI response
+ */
+export async function chatWithSocrates(
+  message: string,
+  userCode?: string
+): Promise<string> {
+  try {
+    const client = getOpenAIClient();
+    
+    // Build the system prompt
+    const systemPrompt = `You are Socrates, an AI-powered interactive coding tutor. You help students learn C++ programming by:
+- Answering questions about C++ concepts
+- Explaining code and algorithms
+- Providing guidance on problem-solving
+- Being encouraging and educational
+- Not giving away complete solutions, but guiding students to discover answers
+
+Be patient, clear, and helpful. If the user provides code, analyze it and provide helpful feedback.`;
+
+    // Build the user message with optional code context
+    let userMessage = message;
+    if (userCode) {
+      userMessage = `${message}\n\nHere is my current code:\n\`\`\`cpp\n${userCode}\n\`\`\``;
+    }
+
+    const response = await client.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [
+        {
+          role: 'system',
+          content: systemPrompt,
+        },
+        {
+          role: 'user',
+          content: userMessage,
+        },
+      ],
+      temperature: 0.7,
+      max_tokens: 1000,
+    });
+
+    const content = response.choices[0]?.message?.content || '';
+    return content.trim();
+  } catch (error) {
+    // Handle API errors gracefully
+    if (error instanceof Error) {
+      if (error.message.includes('OPENAI_API_KEY')) {
+        throw new Error('OpenAI API key is not configured. Please set OPENAI_API_KEY in your .env file.');
+      }
+      if (error.message.includes('rate limit') || error.message.includes('429')) {
+        throw new Error('OpenAI API rate limit exceeded. Please try again in a moment.');
+      }
+      throw new Error(`Failed to chat with Socrates: ${error.message}`);
+    }
+    throw new Error('Unknown error occurred while chatting with Socrates');
+  }
+}
+
+/**
+ * Chat with Socrates using custom prompts
+ * @param systemPrompt System prompt for the AI
+ * @param userPrompt User prompt/message
+ * @returns AI response
+ */
+export async function chatWithSocratesCustom(
+  systemPrompt: string,
+  userPrompt: string
+): Promise<string> {
+  try {
+    const client = getOpenAIClient();
+
+    const response = await client.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [
+        {
+          role: 'system',
+          content: systemPrompt,
+        },
+        {
+          role: 'user',
+          content: userPrompt,
+        },
+      ],
+      temperature: 0.7,
+      max_tokens: 1000,
+    });
+
+    const content = response.choices[0]?.message?.content || '';
+    return content.trim();
+  } catch (error) {
+    // Handle API errors gracefully
+    if (error instanceof Error) {
+      if (error.message.includes('OPENAI_API_KEY')) {
+        throw new Error('OpenAI API key is not configured. Please set OPENAI_API_KEY in your .env file.');
+      }
+      if (error.message.includes('rate limit') || error.message.includes('429')) {
+        throw new Error('OpenAI API rate limit exceeded. Please try again in a moment.');
+      }
+      throw new Error(`Failed to chat with Socrates: ${error.message}`);
+    }
+    throw new Error('Unknown error occurred while chatting with Socrates');
+  }
+}
+
 export interface ErrorExplanation {
   explanation: string;        // What the error means
   whyItHappened: string;      // Why it occurred
